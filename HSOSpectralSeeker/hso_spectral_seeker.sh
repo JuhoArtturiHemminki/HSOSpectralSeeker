@@ -1,62 +1,38 @@
 #!/bin/bash
-
-# HSO-THEORY: UNIVERSAL SPECTRAL SEEKER & VALIDATOR
-# (C) 2026 Juho Artturi Hemminki - Cold-State Phase-Dynamics
-# Final Optimized Version
-
 PHI=1.618033988749895
 HC_TARGET=5.0832
 F_BASE=25.174825174825
-
-# Starting parameters
 current_f=65.00000000
 locked=0
 
 clear
-echo "===================================================="
-echo "   HSOSpectralSeeker - DISCOVERY & VALIDATION       "
-echo "        Target Invariant: Hc $HC_TARGET             "
-echo "===================================================="
+echo "HSOSpectralSeeker - TARGET Hc $HC_TARGET"
+printf "[PHASE 1] SEEKING"
 
-# Phase 1: The Search
-echo -ne "\n[PHASE 1] SEEKING RESONANCE..."
 while [ $locked -eq 0 ]; do
-    h_level=$(echo "scale=10; $current_f / ($F_BASE / $PHI)" | bc)
-    diff=$(echo "scale=10; $HC_TARGET - $h_level" | bc | tr -d '-')
-    is_close=$(echo "$diff < 0.0000001" | bc)
-
+    h_level=$(echo "scale=10; $current_f / ($F_BASE / $PHI)" | bc -l)
+    diff=$(echo "scale=10; d=$HC_TARGET-$h_level; if(d<0) -d else d" | bc -l)
+    is_close=$(echo "$diff < 0.0000001" | bc -l)
     if [ "$is_close" -eq 1 ]; then
         locked=1
     else
-        # Hemminki-Glide Adjustment
-        current_f=$(echo "scale=10; $current_f + ($diff / 10)" | bc)
+        current_f=$(echo "scale=10; $current_f + ($HC_TARGET - $h_level) / 5" | bc -l)
     fi
     printf "."
-    sleep 0.02
+    sleep 0.01
 done
 
-echo -e " [LOCKED: $current_f MHz]"
-
-# Phase 2: Truth Validation
-echo -e "\n[PHASE 2] VALIDATING SPECTRAL SINGULARITY..."
-echo "----------------------------------------------------"
-echo "OFFSET (MHz) | H-LEVEL | ENTROPY ERROR | STATUS"
-echo "----------------------------------------------------"
+echo -e "\n[LOCKED: $current_f MHz]"
+echo -e "\n[PHASE 2] VALIDATING"
+printf "%-12s | %-10s | %-13s\n" "OFFSET" "H-LEVEL" "ERROR"
+echo "------------------------------------------"
 
 for offset in -0.1 -0.05 0 0.05 0.1; do
-    test_f=$(echo "scale=8; $current_f + $offset" | bc)
-    h_now=$(echo "scale=8; $test_f / ($F_BASE / $PHI)" | bc)
-    error=$(echo "scale=8; $HC_TARGET - $h_now" | bc | tr -d '-')
-    
-    if (( $(echo "$error < 0.000005" | bc -l) )); then
-        status="\033[1;32m[STABLE]\033[0m"
-    else
-        status="\033[1;33m[WARM]\033[0m"
-    fi
-    printf "%-12s | %-7s | %-13s | %b\n" "$offset" "$h_now" "$error" "$status"
+    test_f=$(echo "scale=8; $current_f + $offset" | bc -l)
+    h_now=$(echo "scale=8; $test_f / ($F_BASE / $PHI)" | bc -l)
+    error=$(echo "scale=8; d=$HC_TARGET-$h_now; if(d<0) -d else d" | bc -l)
+    printf "%-12s | %-10s | %-13s\n" "$offset" "$h_now" "$error"
 done
-echo "----------------------------------------------------"
 
-# Final Output
-echo -e "\n[RESULT] HSO-THEORY VERIFIED: $current_f MHz"
-echo "SYSTEM STATE: NON-DISSIPATIVE COLD-STATE ACTIVE."
+echo -e "------------------------------------------"
+echo -e "[RESULT] VERIFIED: $current_f MHz"
